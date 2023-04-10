@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <windows.h>
 
 #define MAX_NOS 3500
 #define NUM_VERTICES 1000
@@ -64,13 +62,6 @@ void imprimirGrafo(struct Grafo* grafo) {
     }
 }
 
-double get_current_time() {
-    LARGE_INTEGER time, frequency;
-    QueryPerformanceCounter(&time);
-    QueryPerformanceFrequency(&frequency);
-    return (double)time.QuadPart / (double)frequency.QuadPart;
-}
-
 void dijkstra(struct Grafo* grafo, int inicio) {
     int distancias[NUM_VERTICES];
     bool visitados[NUM_VERTICES];
@@ -103,20 +94,30 @@ void dijkstra(struct Grafo* grafo, int inicio) {
             v = v->prox;
         }
     }
-
     /*printf("\nDistancias minimas a partir do vertice %d:\n", inicio);
     for (int i = 0; i < NUM_VERTICES; i++) {
         printf("Vertice %d: %d\n", i, distancias[i]);
     }*/
 }
 
-int main() {
-    srand(time(NULL));
+int main(int argc, char* argv[]) { 
+
+    omp_set_num_threads(4);
+
+    ////int i;
+    //double start = omp_get_wtime();
+    //#pragma omp parallel for num_threads(2)
+    ///*for (i = 0; i < 10; i++) {
+    //    int id = omp_get_thread_num();
+    //    printf("Thread %d esta executando a iteracao %d do loop\n", id, i);
+    //}*/
+    //double end = omp_get_wtime();
+    //printf("Tempo de Execucao = %3.5f seconds\n", end - start);
 
     struct Grafo* grafo = criarGrafo(NUM_VERTICES);
     int peso = 0;
     int numArestas = 0;
-
+    
     for (int i = 0; i < NUM_VERTICES; i++) {
         for (int j = i + 1; j < NUM_VERTICES; j++) {
             peso++;
@@ -127,30 +128,38 @@ int main() {
             if (peso > 20)
                 peso = 0;
         }
-    }
+    }    
 
-    printf("Numero de Vertices = %d\n", NUM_VERTICES);
-    printf("Numero de Arestas = %d\n", numArestas);
+   /* printf("Numero de Vertices = %d\n", NUM_VERTICES);
+    printf("Numero de Arestas = %d\n", numArestas);*/
     //imprimirGrafo(grafo);
+    
+    int m;
 
-    double start_time = get_current_time();
+    printf("\nUtilizando OpenMP - 2 threads\n");
 
-    for (int m = 0; m < NUM_VERTICES; m++)
+    //Utilizando a diretiva de OpenMP
+    double start = omp_get_wtime();
+    #pragma omp parallel for num_threads(2)
+    for (m = 0; m < NUM_VERTICES; m++) {
+        int id = omp_get_thread_num();
+        //printf("Thread %d esta executando a iteracao %d do loop\n", id, m);
         dijkstra(grafo, m);
+    }
+    double end = omp_get_wtime();
+    printf("Tempo de Execucao = %3.5f seconds\n", end - start);
 
-    double end_time = get_current_time();
-    printf("\nTempo de execucao: %f segundos\n", end_time - start_time);
+    printf("\nSem utilizar OpenMP - 1 thread\n");
+
+    //Sem utilizar OpenMP
+    start = omp_get_wtime();
+    for (m = 0; m < NUM_VERTICES; m++) {
+        int id = omp_get_thread_num();
+        //printf("Thread %d esta executando a iteracao %d do loop\n", id, m);
+        dijkstra(grafo, m);
+    }
+    end = omp_get_wtime();
+    printf("Tempo de Execucao = %3.5f seconds\n", end - start);
 
     return 0;
 }
-
-// Executar programa: Ctrl + F5 ou Menu Depurar > Iniciar Sem Depuração
-// Depurar programa: F5 ou menu Depurar > Iniciar Depuração
-
-// Dicas para Começar: 
-//   1. Use a janela do Gerenciador de Soluções para adicionar/gerenciar arquivos
-//   2. Use a janela do Team Explorer para conectar-se ao controle do código-fonte
-//   3. Use a janela de Saída para ver mensagens de saída do build e outras mensagens
-//   4. Use a janela Lista de Erros para exibir erros
-//   5. Ir Para o Projeto > Adicionar Novo Item para criar novos arquivos de código, ou Projeto > Adicionar Item Existente para adicionar arquivos de código existentes ao projeto
-//   6. No futuro, para abrir este projeto novamente, vá para Arquivo > Abrir > Projeto e selecione o arquivo. sln
