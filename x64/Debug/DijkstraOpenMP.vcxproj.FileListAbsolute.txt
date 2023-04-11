@@ -1,2 +1,1 @@
-C:\Users\lssilva\source\repos\DijkstraOpenMP\x64\Debug\DijkstraOpenMP.exe
 C:\Users\Leanderson\OneDrive\Área de Trabalho\DijkstraOpenMP\x64\Debug\DijkstraOpenMP.exe
