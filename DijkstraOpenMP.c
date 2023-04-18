@@ -8,7 +8,7 @@
 #include <string.h>
 
 #define MAX_NOS 3500
-#define NUM_VERTICES 3500
+#define NUM_VERTICES 1500
 #define MIN_PESO 1
 #define MAX_PESO 20
 #define DIST_MAX INT_MAX
@@ -62,6 +62,7 @@ void imprimirGrafo(struct Grafo* grafo) {
     }
 }
 
+//Abordagem de execução utilizando diretivas OpenMP externas
 void dijkstra(struct Grafo* grafo, int inicio) {
     int distancias[NUM_VERTICES];
     bool visitados[NUM_VERTICES];
@@ -124,6 +125,51 @@ void dijkstraOpenMP(struct Grafo* grafo, int inicio) {
             printf("Thread %d esta executando a iteracao %d do loop\n", id, i);*/
             if (!visitados[i] && (u == -1 || distancias[i] < distancias[u])) {
                 #pragma omp critical //Aqui uma região crítica
+                {
+                    if (!visitados[i] && (u == -1 || distancias[i] < distancias[u])) {
+                        u = i;
+                    }
+                }
+            }
+        }
+
+        visitados[u] = true;
+
+        struct No* v = grafo->cabeca[u];
+
+        while (v != NULL) {
+            if (!visitados[v->vertice] &&
+                distancias[u] + v->peso < distancias[v->vertice]) {
+                distancias[v->vertice] = distancias[u] + v->peso;
+            }
+            v = v->prox;
+        }
+    }
+}
+
+void dijkstraOpenMPGeral(struct Grafo* grafo, int inicio) {
+    int distancias[NUM_VERTICES];
+    bool visitados[NUM_VERTICES];
+
+    omp_set_num_threads(8); //Setando internamente à função o número de threads máximo
+
+    //Não há necessidade de paralelizar esse loop
+    for (int i = 0; i < NUM_VERTICES; i++) {
+        distancias[i] = INT_MAX;
+        visitados[i] = false;
+    }
+
+    distancias[inicio] = 0;
+
+    int count; //count deve ser inicializado fora do loop, em OpenMP
+    #pragma omp parallel for num_threads(2) //Definindo 2 threads para uso no laço externo e geral
+    for (count = 0; count < NUM_VERTICES - 1; count++) {
+        int u = -1;
+        for (int i = 0; i < NUM_VERTICES; i++) {
+            /*int id = omp_get_thread_num();
+            printf("Thread %d esta executando a iteracao %d do loop\n", id, i);*/
+            if (!visitados[i] && (u == -1 || distancias[i] < distancias[u])) {
+            #pragma omp critical //Aqui uma região crítica
                 {
                     if (!visitados[i] && (u == -1 || distancias[i] < distancias[u])) {
                         u = i;
@@ -239,16 +285,13 @@ void dijkstraOpenMPRestrito(struct Grafo* grafo, int inicio) {
     }
 }
 
-
 //-------------------------------- - Casos de Uso------------------------------
-//1 - Cálculo isolado de Dijkstra(1:todos), Sequencial e Paralelo
-//2 - Cálculo de Dijkstra(todos:todos) com Paralelização Externa
-//3 - Cálculo de Dijkstra(todos:todos) com Paralelização Interna no for (dijkstraOpenMP)
+//1 - Cálculo de Dijkstra(todos:todos) com Paralelização Externa
+//2 - Cálculo de Dijkstra(todos:todos) com Paralelização Interna no for (dijkstraOpenMP)
+//3 - Cálculo de Dijsktra(todos:todos) com Paralelização Interna no for geral (dijkstraOpenMPGeral)
 //4 - Cálculo de Dijkstra(todos:todos) com Paralelização Interna no while (dijkstraOpenMPRestrito)
 //5 - Cálculo de Dijkstra(todos:todos) com Paralelização Interna em ambos(dijkstraOpenMPCombinado)
-//6 - Cálculo de Dijkstra(todos:todos) com Paral.Interna no for e Externa(dijkstraOpenMP + Par.Externa)
-//7 - Cálculo de Dijkstra(todos:todos) com Paral.Interna no while e Externa(dijkstraOpenMPRestrito + Par.Externa)
-//8 - Cálculo de Dijkstra(todos:todos) com Paral.Interna em ambos e Externa(dijkstraOpenMPCombinado + Par.Externa)
+//6 - Cálculo de Dijkstra(todos:todos) com Paral.Interna Geral e Externa(dijkstraOpenMPGeral + Par.Externa)
 
 
 int main(int argc, char* argv[]) { 
@@ -304,6 +347,20 @@ int main(int argc, char* argv[]) {
     //double end = omp_get_wtime();
     //printf("Tempo de Execucao = %3.5f seconds\n", end - start);
 
+    /*------------------------------Paralelização dijkstraOpenMPGeral------------------------------------*/
+
+    int n;
+    printf("\nUtilizando OpenMP - Implementacao Interna Geral - 2 threads\n");
+    //Utilizando a diretiva de OpenMP internamente
+    double start = omp_get_wtime();
+    for (n = 0; n < NUM_VERTICES; n++) {
+        //int id = omp_get_thread_num();
+        //printf("Thread %d esta executando a iteracao %d do loop\n", id, n);
+        dijkstraOpenMPGeral(grafo, n);
+    }
+    double end = omp_get_wtime();
+    printf("Tempo de Execucao = %3.5f seconds\n", end - start);
+
     /*------------------------------Paralelização dijkstraOpenMPCombinado------------------------------------*/
 
     //int n;
@@ -332,16 +389,6 @@ int main(int argc, char* argv[]) {
     //double end = omp_get_wtime();
     //printf("Tempo de Execucao = %3.5f seconds\n", end - start);
 
-
-    /*------------------------------Paralelização para Execução Isolada------------------------------------*/
-
-    //printf("\nUtilizando OpenMP - Implementacao para Execucao Isolada - 2 threads\n");
-    ////Utilizando a diretiva de OpenMP internamente
-    //double start = omp_get_wtime();    
-    //    dijkstraOpenMP(grafo, 0);    
-    //double end = omp_get_wtime();
-    //printf("Tempo de Execucao = %3.5f seconds\n", end - start);
-
     /*-----------------------------Sem Paralelização------------------------------------------*/
 
     ////Sem utilizar OpenMP
@@ -353,10 +400,6 @@ int main(int argc, char* argv[]) {
     //double end = omp_get_wtime();
     //printf("Tempo de Execucao = %3.5f seconds\n", end - start);
 
-    /*Criar um método de comparação de resultados para verificar se há condição de corrida*/
-
-    /*Considerar criar um método que teste o desempenho da chamada de um número maior de 
-    threads que o suportado pelo processador. Estudar o comportamento resultante*/
 
     return 0;
 }
