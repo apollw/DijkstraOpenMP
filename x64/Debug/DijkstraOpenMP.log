@@ -1,3 +1,3 @@
 ﻿cl : linha de comando  warning D9025: substituindo '/openmp' com '/openmp:llvm'
   DijkstraOpenMP.c
-  DijkstraOpenMP.vcxproj -> C:\Users\lssilva\source\repos\DijkstraOpenMP\x64\Debug\DijkstraOpenMP.exe
+  DijkstraOpenMP.vcxproj -> C:\Users\Leanderson\OneDrive\Área de Trabalho\DijkstraOpenMP\x64\Debug\DijkstraOpenMP.exe
